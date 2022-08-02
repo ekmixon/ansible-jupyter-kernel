@@ -298,13 +298,13 @@ class AnsibleKernel(Kernel):
     def clean_up_task_files(self, backup=False):
         for task_file in self.task_files:
             if backup:
-                shutil.copy(task_file, task_file + ".bak")
+                shutil.copy(task_file, f"{task_file}.bak")
             if os.path.exists(task_file):
                 os.unlink(task_file)
         self.task_files = []
 
     def runner_process_message(self, data):
-        logger.info("runner message:\n{}".format(pprint.pformat(data)))
+        logger.info(f"runner message:\n{pprint.pformat(data)}")
         try:
 
             event_data = data.get('event_data', {})
@@ -313,8 +313,7 @@ class AnsibleKernel(Kernel):
             event = data.get('event')
 
             if DEBUG:
-                stream_content = dict(name='stdout',
-                                      text="{}\n".format(pprint.pformat(data)))
+                stream_content = dict(name='stdout', text=f"{pprint.pformat(data)}\n")
                 self.send_response(self.iopub_socket, 'stream', stream_content)
 
             if event == 'playbook_on_start':
@@ -390,8 +389,7 @@ class AnsibleKernel(Kernel):
             elif event == 'error':
                 self.queue.put(StatusMessage(['Error', dict(stdout=data.get('stdout', ''))]))
             else:
-                stream_content = dict(name='stdout',
-                                      text="{}\n".format(pprint.pformat(data)))
+                stream_content = dict(name='stdout', text=f"{pprint.pformat(data)}\n")
                 self.send_response(self.iopub_socket, 'stream', stream_content)
 
         except BaseException:
@@ -419,12 +417,12 @@ class AnsibleKernel(Kernel):
             logger.debug('include_tasks')
             if message_type == 'TaskStatus' and message_data.get('failed', False):
                 logger.debug('failed')
-                output = 'fatal: [%s]: FAILED!' % message_data['device_name']
+                output = f"fatal: [{message_data['device_name']}]: FAILED!"
                 if message_data.get('results', None):
                     output += " => "
                     output += message_data['results']
                 output += "\n"
-                stream_content = {'name': 'stdout', 'text': str(output)}
+                stream_content = {'name': 'stdout', 'text': output}
                 self.send_response(self.iopub_socket, 'stream', stream_content)
             return stop_processing
 
@@ -434,11 +432,10 @@ class AnsibleKernel(Kernel):
             logger.debug('TaskStart')
             task_name = message_data['task_name']
             if message_data.get('role_name'):
-                task_name = "%s : %s" % (message_data['role_name'], task_name)
+                task_name = f"{message_data['role_name']} : {task_name}"
             output = 'TASK [%s] %s\n' % (task_name, '*' * (72 - len(task_name)))
         elif message_type == 'DeviceStatus':
             logger.debug('DeviceStatus')
-            pass
         elif message_type == 'PlaybookEnded':
             logger.debug('PlaybookEnded')
             output = "\nPlaybook ended\nContext lost!\n"
@@ -452,16 +449,16 @@ class AnsibleKernel(Kernel):
             logger.debug('TaskStatus')
             if message_data.get('changed', False):
                 logger.debug('changed')
-                output = 'changed: [%s]' % message_data['device_name']
+                output = f"changed: [{message_data['device_name']}]"
             elif message_data.get('unreachable', False):
                 logger.debug('unreachable')
-                output = 'fatal: [%s]: UNREACHABLE!' % message_data['device_name']
+                output = f"fatal: [{message_data['device_name']}]: UNREACHABLE!"
             elif message_data.get('failed', False):
                 logger.debug('failed')
-                output = 'fatal: [%s]: FAILED!' % message_data['device_name']
+                output = f"fatal: [{message_data['device_name']}]: FAILED!"
             else:
                 logger.debug('ok')
-                output = 'ok: [%s]' % message_data['device_name']
+                output = f"ok: [{message_data['device_name']}]"
 
             if message_data.get('full_results', None) and self.registered_variable is not None:
                 logger.debug('full_results %s', type(message_data.get('full_results')))
@@ -636,12 +633,10 @@ class AnsibleKernel(Kernel):
         logger.debug('code_data type: %s', type(code_data))
         self.current_play = code
 
-        playbook = []
-
         current_play = yaml.load(self.current_play, Loader=yaml.FullLoader)
         if current_play is None:
             current_play = {}
-        playbook.append(current_play)
+        playbook = [current_play]
         tasks = current_play['tasks'] = current_play.get('tasks', [])
         current_play['roles'] = current_play.get('roles', [])
         for role in current_play['roles']:
@@ -693,7 +688,7 @@ class AnsibleKernel(Kernel):
                                                                    finished_callback=self.finished_callback,
                                                                    event_handler=self.runner_process_message)
         logger.info("runner started")
-        logger.info("Runner status: {}".format(self.runner.status))
+        logger.info(f"Runner status: {self.runner.status}")
         while self.runner.status in ['unstarted', 'running', 'starting']:
             logger.info("In runner loop")
 
@@ -717,7 +712,7 @@ class AnsibleKernel(Kernel):
 
             logger.info("Bottom of runner loop")
             time.sleep(1)
-        logger.info("Runner state is now {}".format(self.runner.status))
+        logger.info(f"Runner state is now {self.runner.status}")
         self.clean_up_task_files()
 
         logger.info("done")
@@ -734,10 +729,13 @@ class AnsibleKernel(Kernel):
             logger.debug("widget %s", pformat(widget))
             if 'var_name' in widget and 'value' in widget:
                 widget_vars[widget['var_name']] = widget['value']
-            if 'ansible_kernel_property' in widget and 'value' in widget:
-                if widget['ansible_kernel_property'] == 'vault_password':
-                    self.vault_password = widget['value']
-                    logger.debug("set vault_password")
+            if (
+                'ansible_kernel_property' in widget
+                and 'value' in widget
+                and widget['ansible_kernel_property'] == 'vault_password'
+            ):
+                self.vault_password = widget['value']
+                logger.debug("set vault_password")
 
         # Save the vars from the widgets and include it for this task
         with open(widget_vars_file, 'w') as f:

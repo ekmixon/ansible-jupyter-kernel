@@ -10,7 +10,7 @@ class ActionModule(ActionBase):
     def run(self, tmp=None, task_vars=None):
         # print ('pause_for_kernel')
         if task_vars is None:
-            task_vars = dict()
+            task_vars = {}
         host = self._task.args.get('host', None)
         port = self._task.args.get('port', None)
         task_num = self._task.args.get('task_num', None)

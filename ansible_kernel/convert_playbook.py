@@ -85,25 +85,25 @@ def main(args=None):
             print("No inventory file found at {0}".format(inventory))
             return 1
 
-    if templates_dir is not None:
-        if not os.path.exists(templates_dir):
-            print("No templates directory found at {0}".format(templates_dir))
-            return 1
+    if templates_dir is not None and not os.path.exists(templates_dir):
+        print("No templates directory found at {0}".format(templates_dir))
+        return 1
 
-    if vars_files_dir is not None:
-        if not os.path.exists(vars_files_dir):
-            print("No vars files directory found at {0}".format(vars_files_dir))
-            return 1
+    if vars_files_dir is not None and not os.path.exists(vars_files_dir):
+        print("No vars files directory found at {0}".format(vars_files_dir))
+        return 1
 
-    if host_vars_files_dir is not None:
-        if not os.path.exists(host_vars_files_dir):
-            print("No host vars directory found at {0}".format(host_vars_files_dir))
-            return 1
+    if host_vars_files_dir is not None and not os.path.exists(
+        host_vars_files_dir
+    ):
+        print("No host vars directory found at {0}".format(host_vars_files_dir))
+        return 1
 
-    if group_vars_files_dir is not None:
-        if not os.path.exists(group_vars_files_dir):
-            print("No group vars directory found at {0}".format(group_vars_files_dir))
-            return 1
+    if group_vars_files_dir is not None and not os.path.exists(
+        group_vars_files_dir
+    ):
+        print("No group vars directory found at {0}".format(group_vars_files_dir))
+        return 1
     if vars_files is not None:
         for vars_file in vars_files:
             if not os.path.exists(vars_file):
@@ -119,7 +119,7 @@ def main(args=None):
         output_file = os.path.abspath(parsed_args['<output>'])
     else:
         base_name, _ = os.path.splitext(playbook_file)
-        output_file = os.path.abspath(base_name + ".ipynb")
+        output_file = os.path.abspath(f"{base_name}.ipynb")
 
     with open(playbook_file) as f:
         content = f.read()

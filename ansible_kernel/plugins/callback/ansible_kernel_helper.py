@@ -49,32 +49,24 @@ class CallbackModule(CallbackBase):
         self.hosts = []
 
     def _format_output(self, result):
-        if 'stdout_lines' in result:
-            return '\n'.join(result['stdout_lines'])
-        return ""
+        return '\n'.join(result['stdout_lines']) if 'stdout_lines' in result else ""
 
     def _format_error(self, result):
-        if 'stderr_lines' in result:
-            return '\n'.join(result['stderr_lines'])
-        return ""
+        return '\n'.join(result['stderr_lines']) if 'stderr_lines' in result else ""
 
     def _dump_results(self, result):
 
         r = result.copy()
         if 'invocation' in r:
             del r['invocation']
-        if 'stdout' in r:
-            if r['stdout']:
-                r['stdout'] = '[see below]'
-        if 'stdout_lines' in r:
-            if r['stdout_lines']:
-                r['stdout_lines'] = '[removed for clarity]'
-        if 'stderr' in r:
-            if r['stderr']:
-                r['stderr'] = '[see below]'
-        if 'stderr_lines' in r:
-            if r['stderr_lines']:
-                r['stderr_lines'] = '[removed for clarity]'
+        if 'stdout' in r and r['stdout']:
+            r['stdout'] = '[see below]'
+        if 'stdout_lines' in r and r['stdout_lines']:
+            r['stdout_lines'] = '[removed for clarity]'
+        if 'stderr' in r and r['stderr']:
+            r['stderr'] = '[see below]'
+        if 'stderr_lines' in r and r['stderr_lines']:
+            r['stderr_lines'] = '[removed for clarity]'
         if 'changed' in r:
             del r['changed']
         if 'reason' in r:
@@ -92,7 +84,7 @@ class CallbackModule(CallbackBase):
         args = ''
         if not task.no_log:
             args = u', '.join(u'%s=%s' % a for a in task.args.items())
-            args = u' %s' % args
+            args = f' {args}'
         self.socket.send_string(json.dumps(['TaskStart', dict(task_name=task.get_name().strip(),
                                                               task_arg=args,
                                                               task_id=str(task._uuid))]))
@@ -162,15 +154,18 @@ class CallbackModule(CallbackBase):
     def DISABLED_v2_on_any(self, *args, **kwargs):
         if self.socket is None:
             return
-        self._display.display("--- play: {} task: {} ---".format(getattr(self.play, 'name', None), self.task))
+        self._display.display(
+            f"--- play: {getattr(self.play, 'name', None)} task: {self.task} ---"
+        )
+
 
         self._display.display("     --- ARGS ")
         for i, a in enumerate(args):
-            self._display.display('     %s: %s' % (i, a))
+            self._display.display(f'     {i}: {a}')
 
         self._display.display("      --- KWARGS ")
-        for k in kwargs:
-            self._display.display('     %s: %s' % (k, kwargs[k]))
+        for k, v in kwargs.items():
+            self._display.display(f'     {k}: {v}')
 
     @debug
     def v2_playbook_on_play_start(self, play):
@@ -190,7 +185,7 @@ class CallbackModule(CallbackBase):
         args = ''
         if not task.no_log:
             args = u', '.join(u'%s=%s' % a for a in task.args.items())
-            args = u' %s' % args
+            args = f' {args}'
         self.socket.send_string(json.dumps(['TaskStart', dict(task_name=task.get_name().strip(),
                                                               task_arg=args,
                                                               task_id=str(task._uuid))]))
@@ -205,7 +200,7 @@ class CallbackModule(CallbackBase):
             status = "fail" if s['failures'] > 0 else status
             status = "fail" if s['unreachable'] > 0 else status
             self.socket.send_string(json.dumps(['DeviceStatus', dict(name=host.get_name())]))
-        self.socket.send_string(json.dumps(['PlaybookEnded', dict()]))
+        self.socket.send_string(json.dumps(['PlaybookEnded', {}]))
 
     @debug
     def v2_playbook_on_no_hosts_remaining(self):
